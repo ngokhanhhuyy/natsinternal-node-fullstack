@@ -91,23 +91,26 @@ export class MySqlManualDbContext implements IDbContext {
   private async updateUserAsync(user: PersistenceUser): Promise<number> {
     let affectedRows = await this._dbConnector.executeAsync(`
       UPDATE \`Users\`
-      SET (\`UserName\` = ?, \`PasswordHash\` = ?)
+      SET \`UserName\` = ?, \`PasswordHash\` = ?
       WHERE \`Id\` = ? AND \`RowVersion\` = ?;
-    `);
+    `, [user.userName, user.passwordHash]);
 
     if (affectedRows == 0) {
       throw PersistenceError.forConcurrencyConflict();
     }
 
-    for (const role in user.roles) {
-      affectedRows += await this._dbConnector.executeAsync(`
-        INSERT INTO \`UserRoles\` (\`UserId\` = ?, \`RoleId\` = ?)
-        ON DUPLICATE KEY UPDATE \`RoleId\` = ?;
-      `);
+    affectedRows += await this._dbConnector.executeAsync(`
+      INSERT IGNORE INTO \`UserRoles\` (\`UserId\`, \`RoleId\`)
+      VALUES ${user.roles.map(_ => "(?, ?)").join(", ")};
+    `, [...user.roles.map(role => [role.id, role.id])]);
 
-      const await this._dbConnector.queryAsync(`
-        SELECT \`RoleId\` FROM \`UserRoles\` WHERE \`UserId\` = ? AND \`RoleId\` NOT IN (?);
-      `)
-    }
+    affectedRows += await this._dbConnector.executeAsync(`
+      DELETE FROM \`UserRoles\`
+      WHERE \`UserId\` = ?
+      AND \`RoleId\` NOT IN (${user.roles.map(role => role.id)})
+      AND \`RoleId\` IN (SELECT \`RoleId\` FROM \`UserRoles\` WHERE \`UserId\` = ?);
+    `, [user.id, ...user.roles.map(role => role.id), user.id]);
+
+    return affectedRows;
   }
 }

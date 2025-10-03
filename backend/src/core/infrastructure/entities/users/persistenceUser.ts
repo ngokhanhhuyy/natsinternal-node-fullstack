@@ -1,5 +1,6 @@
 import { User } from "@/core/domain/features/users/entities/user.js";
 import { PersistenceRole } from "./persistenceRole.js";
+import {Role} from "@/core/domain/features/users/entities/role.js";
 
 export class PersistenceUser extends User {
   public isNew: boolean = false;
@@ -7,6 +8,19 @@ export class PersistenceUser extends User {
   public isDeleted: boolean = false;
   public addedRoles: PersistenceRole[] = [];
   public removedRoles: PersistenceRole[] = [];
+  public readonly rowVersion: number | null = null;
+
+  public constructor(
+      id: string,
+      userName: string,
+      passwordHash: string,
+      createdDateTime: Date,
+      deletedDateTime: Date | null,
+      roles: Role[],
+      rowVersion: number | null) {
+    super(id, userName, passwordHash, createdDateTime, deletedDateTime, roles);
+    this.rowVersion = rowVersion;
+  }
 
   public addToRoles(roles: PersistenceRole[]): void {
     super.addToRoles(roles);
@@ -39,7 +53,7 @@ export class PersistenceUser extends User {
       createdDateTime: Date,
       roles: PersistenceRole[]): PersistenceUser {
     const id = crypto.randomUUID();
-    const user = new PersistenceUser(id, userName, passwordHash, createdDateTime, null, roles);
+    const user = new PersistenceUser(id, userName, passwordHash, createdDateTime, null, roles, null);
     user.isNew = true;
 
     return user;
@@ -51,7 +65,8 @@ export class PersistenceUser extends User {
       passwordHash: string,
       createdDateTime: Date,
       deletedDateTime: Date | null,
-      roles: PersistenceRole[]): PersistenceUser {
-    return new PersistenceUser(id, userName, passwordHash, createdDateTime, deletedDateTime, roles);
+      roles: PersistenceRole[],
+      rowVersion: number | null): PersistenceUser {
+    return new PersistenceUser(id, userName, passwordHash, createdDateTime, deletedDateTime, roles, rowVersion);
   }
 }
