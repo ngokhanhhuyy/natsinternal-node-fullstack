@@ -1,4 +1,4 @@
-import { AbstractEntity } from "@/core/domain/seedworks/entities/abstract-entity.js";
+import { AbstractEntity } from "@backend/core/domain/seedworks/entities/abstract-entity.js";
 
 export class Permission extends AbstractEntity {
   public readonly id: string;

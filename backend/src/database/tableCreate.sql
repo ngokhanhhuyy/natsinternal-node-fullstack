@@ -1,9 +1,11 @@
+-- Active: 1731222437356@@127.0.0.1@3306@natsinternal_node
 CREATE TABLE IF NOT EXISTS users (
     id CHAR(36),
     user_name VARCHAR(20) NOT NULL,
     password_hash CHAR(60) NOT NULL,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    row_version BIGINT,
+    created_datetime DATETIME NOT NULL,
+    deleted_datetime DATETIME NOT NULL,
+    row_version BIGINT DEFAULT 1,
     CONSTRAINT PK__users__id PRIMARY KEY (Id),
     CONSTRAINT UNIQUE__users__user_name UNIQUE (user_name)
 );
@@ -13,7 +15,6 @@ CREATE TABLE IF NOT EXISTS roles (
     name VARCHAR(15) NOT NULL,
     display_name VARCHAR(25) NOT NULL,
     power_level TINYINT UNSIGNED NOT NULL,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     row_version BIGINT,
     CONSTRAINT PK__roles__id PRIMARY KEY (Id),
     CONSTRAINT UNIQUE__roles__name UNIQUE (Name)

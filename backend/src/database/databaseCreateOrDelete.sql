@@ -1,5 +1,5 @@
-CREATE DATABASE natsinternal
+CREATE DATABASE natsinternal_node
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-DROP DATABASE natsinternal;
+DROP DATABASE natsinternal_node;

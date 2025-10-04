@@ -1,7 +1,7 @@
-import type { IDbConnector } from "@/core/infrastructure/dbContext/dbConnectorInterface.js";
-import { MySqlDbConnector } from "@/core/infrastructure/dbContext/mysqlDbConnector.js";
-import { IDbContext } from "@/core/infrastructure/dbContext/dbContextInterface.js";
-import { MySqlManualDbContext } from "@/core/infrastructure/dbContext/mySqlManualDbContext.js";
+import type { IDbConnector } from "@backend/core/infrastructure/db/IDbConnector.js";
+import { MySqlDbConnector } from "@backend/core/infrastructure/db/MySqlDbConnector.js";
+import { IDbContext } from "@backend/core/infrastructure/db/dbContext/IDbContext.js";
+import { MySqlManualDbContext } from "@backend/core/infrastructure/db/dbContext/MySqlManualDbContext.js";
 
 type ServiceInstanceAndInitializer<T = object> = { instance: T, initializer: () => T };
 

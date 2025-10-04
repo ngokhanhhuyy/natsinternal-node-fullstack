@@ -1,6 +1,6 @@
-import { AbstractEntity } from "@/core/domain/seedworks/entities/abstract-entity.js";
+import { AbstractEntity } from "@backend/core/domain/seedworks/entities/abstract-entity.js";
 import { Role } from "./role.js";
-import { DomainError } from "@/core/domain/errors/domainError.js";
+import { DomainError } from "@backend/core/domain/errors/domainError.js";
 
 export class User extends AbstractEntity {
   private _id: string;

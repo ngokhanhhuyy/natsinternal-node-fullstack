@@ -1,4 +1,4 @@
-import { Permission } from "@/core/domain/features/users/entities/permission.js";
+import { Permission } from "@backend/core/domain/features/users/entities/permission.js";
 
 export class PersistencePermission extends Permission {
   public static newPersistencePermission(name: string, roleId: string): PersistencePermission {
