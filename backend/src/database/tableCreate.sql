@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_name VARCHAR(20) NOT NULL,
     password_hash CHAR(60) NOT NULL,
     created_datetime DATETIME NOT NULL,
-    deleted_datetime DATETIME NOT NULL,
+    deleted_datetime DATETIME,
     row_version BIGINT DEFAULT 1,
     CONSTRAINT PK__users__id PRIMARY KEY (Id),
     CONSTRAINT UNIQUE__users__user_name UNIQUE (user_name)

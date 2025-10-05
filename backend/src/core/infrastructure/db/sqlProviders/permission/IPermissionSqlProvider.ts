@@ -5,5 +5,5 @@ export type PermissionDbRecord = {
 }
 
 export interface IPermissionSqlProvider {
-  getPermissionsUserIdsAsync(userIds: string[]): Promise<PermissionDbRecord[]>;
+  selectPermissionsByUserIds(userIds: string[]): string;
 }

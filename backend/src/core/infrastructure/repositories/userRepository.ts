@@ -4,19 +4,33 @@ import type { IUserRepository } from "@backend/core/domain/features/users/reposi
 import { IDbConnector } from "@backend/core/infrastructure/db/dbConnector/IDbConnector.js";
 import { AbstractRepository } from "./abstractRepository.js";
 import { PersistenceUser } from "@backend/core/infrastructure/entities/users/persistenceUser.js";
-// import { PersistenceError } from "@backend/core/application/unitOfWork/persistenceError.js";
+import { PersistenceError } from "@backend/core/application/unitOfWork/persistenceError.js";
 import { PersistenceRole } from "@backend/core/infrastructure/entities/users/persistenceRole.js";
 import { PersistencePermission } from "@backend/core/infrastructure/entities/users/persistencePermission.js";
-import { IUserSqlProvider } from "../db/sqlProviders/user/IUserSqlProvider.js";
+import { IUserSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/user/IUserSqlProvider.js";
+import { IRoleSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/role/IRoleSqlProvider.js";
+import { IUserRoleSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/userRole/IUserRoleSqlProvider.js";
+import { IPermissionSqlProvider } from "../db/sqlProviders/permission/IPermissionSqlProvider.js";
 
 export class UserRepository extends AbstractRepository implements IUserRepository {
   private readonly _dbConnector: IDbConnector;
   private readonly _userSqlProvider: IUserSqlProvider;
+  private readonly _roleSqlProvider: IRoleSqlProvider;
+  private readonly _userRoleSqlProvider: IUserRoleSqlProvider;
+  private readonly _permissionSqlProvider: IPermissionSqlProvider;
 
-  public constructor(dbConnector: IDbConnector, userSqlProvider: IUserSqlProvider) {
+  public constructor(
+      dbConnector: IDbConnector,
+      userSqlProvider: IUserSqlProvider,
+      roleSqlProvider: IRoleSqlProvider,
+      userRoleSqlProvider: IUserRoleSqlProvider,
+      permissionSqlProvider: IPermissionSqlProvider) {
     super();
     this._dbConnector = dbConnector;
     this._userSqlProvider = userSqlProvider;
+    this._roleSqlProvider = roleSqlProvider;
+    this._userRoleSqlProvider = userRoleSqlProvider;
+    this._permissionSqlProvider = permissionSqlProvider;
   }
 
   public async getUserByIdAsync(id: string): Promise<User | null> {
@@ -44,48 +58,9 @@ export class UserRepository extends AbstractRepository implements IUserRepositor
 
     type DataSets = [UserRecord[], RoleRecord[], PermissionRecord[]];
     const [userRecords, roleRecords, permissionRecords] = await this._dbConnector.queryMultipleAsync<DataSets>([
-      {
-        sql: `
-          SELECT
-            id,
-            user_name AS userName,
-            password_hash AS passwordHash,
-            created_datetime AS createdDateTime,
-            deleted_datetime AS deletedDateTime,
-            row_version AS rowVersion
-          FROM users
-          WHERE id = ? AND deleted_datetime IS NULL;
-        `,
-        params: [id]
-      },
-      {
-        sql: `
-          SELECT
-            roles.id,
-            roles.name,
-            roles.display_name AS displayName,
-            roles.power_level AS powerLevel
-          FROM roles
-          INNER JOIN user_roles ON roles.id = user_roles.role_id
-          WHERE user_roles.user_id = ?;
-        `,
-        params: [id]
-      },
-      {
-        sql: `
-          SELECT
-            id,
-            name,
-            role_id AS roleId
-          FROM permissions
-          WHERE role_id IN (
-            SELECT role_id
-            FROM user_roles
-            WHERE user_id = ?
-          );
-        `,
-        params: [id]
-      }
+      this._userSqlProvider.selectUsersByIdAndIsDeletedWithLimitSql(id, false, 1),
+      this._roleSqlProvider.selectRolesByUserIdsSql([id]),
+      this._permissionSqlProvider.selectPermissionsByUserIds([id])
     ]);
 
     if (userRecords.length === 0) {
@@ -140,10 +115,9 @@ export class UserRepository extends AbstractRepository implements IUserRepositor
       await this._dbConnector.executeAsync(insertUserSql);
 
       if (persistenceUser.roles.length) {
-        await this._dbConnector.executeAsync(`
-          INSERT INTO user_roles (user_id, role_id)
-          VALUES ?;
-        `, persistenceUser.roles.map<[string, string]>(role => [persistenceUser.id, role.id]));
+        const insertUserRolesSqlStatement = this._userRoleSqlProvider
+            .insertUserRolesSql(persistenceUser.roles.map(role => ({ userId: persistenceUser.id, roleId: role.id })));
+        await this._dbConnector.executeAsync(insertUserRolesSqlStatement);
       }
 
       return persistenceUser.id;
@@ -152,72 +126,43 @@ export class UserRepository extends AbstractRepository implements IUserRepositor
     return await this._dbConnector.useTransactionIfNotBegunAsync(operation);
   }
 
-  public async updateUserAsync(user: User): Promise<boolean> {
+  public async updateUserAsync(user: User): Promise<void> {
+    const persistenceUser = AbstractRepository.ensureDomainEntityIsPersistenceEntity(user, PersistenceUser);
     const operation = async () => {
-      let rowVersionCondition: string = "";
-      let params: [string] | [string, number] = [user.passwordHash];
-      if (user instanceof PersistenceUser) {
-        rowVersionCondition = "AND row_version = ?";
-        params = [...params, user.rowVersion];
-      }
-
-      const updatedRecordCount = await this._dbConnector.executeAsync(`
-        UPDATE users
-        SET
-          password_hash = ?,
-          row_version = row_version + 1
-        WHERE id = ? ${rowVersionCondition};
-      `, params);
+      const updateUserSqlStatement = this._userSqlProvider.updateUserSql(persistenceUser);
+      const updatedRecordCount = await this._dbConnector.executeAsync(updateUserSqlStatement);
 
       if (!updatedRecordCount) {
-        return false;
+        throw PersistenceError.forConcurrencyConflict();
       }
 
       if (user instanceof PersistenceUser) {
-        await this._dbConnector.executeMultipleAsync([
-          {
-            sql: `
-              INSERT INTO user_roles (user_id, role_id)
-              VALUES ?;
-            `,
-            params: user.addedRoles.map(role => [user.id, role.id])
-          },
-          {
-            sql: `
-              DELETE FROM user_roles
-              WHERE user_id = ? AND role_id NOT IN (${user.roles.map(_ => "?").join(", ")});
-            `,
-            params: [user.id, ...user.roles.map(role => role.id)]
-          }
-        ]);
-      };
-
-      return true;
+        const insertUserRolesSqlStatement = this._userRoleSqlProvider
+            .insertUserRolesSql(persistenceUser.roles.map(role => ({ userId: persistenceUser.id, roleId: role.id })));
+        const deleteUserRolesSqlStatement = this._userRoleSqlProvider
+            .deleteUserRolesByUserIdAndRoleIdsSql(persistenceUser.id, persistenceUser.roles.map(role => role.id));
+        await this._dbConnector.executeMultipleAsync([insertUserRolesSqlStatement, deleteUserRolesSqlStatement]);
+      }
     }
 
-    return await this._dbConnector.useTransactionIfNotBegunAsync(operation);
+    await this._dbConnector.useTransactionIfNotBegunAsync(operation);
   }
 
-  public async removeUserAsync(user: User): Promise<boolean> {
+  public async removeUserAsync(user: User): Promise<void> {
+    const persistenceUser = AbstractRepository.ensureDomainEntityIsPersistenceEntity(user, PersistenceUser);
     const operation = async () => {
-      const deletedRowCount = await this._dbConnector.executeAsync(`
-        UPDATE users
-        SET deleted_datetime = ?, row_version = row_version + 1
-        WHERE id = ?;
-      `, [user.id, user.deletedDateTime]);
+      const deleteUserSqlStatement = this._userSqlProvider.deleteUserSql(persistenceUser);
+      const deletedRowCount = await this._dbConnector.executeAsync(deleteUserSqlStatement);
 
       if (!deletedRowCount) {
-        return false;
+        throw PersistenceError.forConcurrencyConflict();
       }
 
-      await this._dbConnector.executeAsync(`
-        DELETE FROM user_roles
-        WHERE user_id = ?  
-      `, [user.id]);
-
-      return true;
+      const deleteUserRolesSqlStatement = this._userRoleSqlProvider
+          .deleteUserRolesByUserIdAndRoleIdsSql(persistenceUser.id, persistenceUser.roles.map(role => role.id));
+      await this._dbConnector.executeAsync(deleteUserRolesSqlStatement);
     };
 
-    return await this._dbConnector.useTransactionIfNotBegunAsync(operation);
+    await this._dbConnector.useTransactionIfNotBegunAsync(operation);
   }
 }

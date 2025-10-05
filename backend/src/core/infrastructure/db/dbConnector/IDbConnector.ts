@@ -1,9 +1,9 @@
 export interface IDbConnector {
   isTransactionBegun: boolean;
-  queryAsync<TRecord>(sql: string, params?: any[]): Promise<TRecord[]>;
-  queryMultipleAsync<TDataSets extends object[][]>(args: { sql: string; params?: any[] }[]): Promise<TDataSets>;
-  executeAsync(sql: string, params?: any[]): Promise<number>;
-  executeMultipleAsync(args: { sql: string, params?: any[] }[]): Promise<number>;
+  queryAsync<TRecord>(sqlStatement: string): Promise<TRecord[]>;
+  queryMultipleAsync<TDataSets extends object[][]>(sqlStatements: string[]): Promise<TDataSets>;
+  executeAsync(sqlStatement: string): Promise<number>;
+  executeMultipleAsync(sqlStatements: string[]): Promise<number>;
   useTrasactionAsync<T>(operation: () => Promise<T>): Promise<T>;
   useTransactionIfNotBegunAsync<T>(operation: () => Promise<T>): Promise<T>;
   commitTransactionAsync(): Promise<void>;

@@ -6,5 +6,5 @@ export type RoleDbRecord = {
 }
 
 export interface IRoleSqlProvider {
-  getRolesByUserIdsAsync(userIds: string[]): Promise<RoleDbRecord[]>;
+  selectRolesByUserIdsSql(userIds: string[]): string;
 }
