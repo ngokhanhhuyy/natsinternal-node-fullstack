@@ -2,7 +2,7 @@ import { ServiceLifetime, type IServiceProvider, type Service } from "@backend/d
 
 export type ServiceRegisteredInfo = Omit<Service<object>, "instance">;
 
- export class ServiceProvider implements IServiceProvider {
+export class ServiceProvider implements IServiceProvider {
   private readonly _services = new Map<DependencyToken<object>, Service<object>>();
 
   public constructor(serviceRegisteredInfos: ServiceRegisteredInfo[]) {
