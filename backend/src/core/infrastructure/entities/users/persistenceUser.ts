@@ -1,6 +1,6 @@
-import { User } from "@backend/core/domain/features/users/entities/user.js";
+import { User } from "@backend/core/domain/features/users/entities/User.js";
 import { PersistenceRole } from "./persistenceRole.js";
-import { Role } from "@backend/core/domain/features/users/entities/role.js";
+import { Role } from "@backend/core/domain/features/users/entities/Role.js";
 
 export class PersistenceUser extends User {
   public addedRoles: PersistenceRole[] = [];

@@ -1,5 +1,5 @@
 import { AbstractEntity } from "@backend/core/domain/seedworks/entities/abstract-entity.js";
-import { Role } from "./role.js";
+import { Role } from "./Role.js";
 import { DomainError } from "@backend/core/domain/errors/domainError.js";
 
 export class User extends AbstractEntity {

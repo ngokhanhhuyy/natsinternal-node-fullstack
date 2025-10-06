@@ -1,5 +1,5 @@
-import type { User } from "@backend/core/domain/features/users/entities/user.js";
-import type { Role } from "@backend/core/domain/features/users/entities/role.js";
+import type { User } from "../entities/User.js";
+import type { Role } from "../entities/Role.js";
 
 export interface IUserRepository {
   getUserByIdAsync(id: string): Promise<User | null>;
@@ -8,3 +8,5 @@ export interface IUserRepository {
   updateUserAsync(user: User): Promise<void>;
   removeUserAsync(user: User): Promise<void>;
 }
+
+export const IUserRepositoryToken: DependencyToken<IUserRepository> = Symbol("IUserRepository");

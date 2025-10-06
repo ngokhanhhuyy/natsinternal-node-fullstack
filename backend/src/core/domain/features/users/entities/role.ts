@@ -1,5 +1,5 @@
 import { AbstractEntity } from "@backend/core/domain/seedworks/entities/abstract-entity.js";
-import { Permission } from "./permission.js";
+import { Permission } from "./Permission.js";
 
 export class Role extends AbstractEntity {
   public readonly id: string;

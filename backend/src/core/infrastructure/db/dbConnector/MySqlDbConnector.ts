@@ -2,52 +2,57 @@ import { createPool, type Pool, type PoolConnection, type ResultSetHeader } from
 import type { IDbConnector } from "@backend/core/infrastructure/db/dbConnector/IDbConnector.js";
 
 export class MySqlDbConnector implements IDbConnector {
-  private _connection: PoolConnection;
+  private _connection: PoolConnection | null = null;
   private static _pool: Pool;
   public isTransactionBegun: boolean = false;
 
-  public constructor(connection: PoolConnection) {
-    this._connection = connection;
-  }
-
   public format(sql: string, params: any[]): string {
-    return this._connection.format(sql, params);
+    return MySqlDbConnector._pool.format(sql, params);
   }
 
-  public async queryAsync<T>(
-      sql: string,
-      params?: Record<string, any>): Promise<T[]> {
-    const [rows] = await this._connection.execute(sql, params);
+  public async queryAsync<T>(sql: string, params?: Record<string, any>): Promise<T[]> {
+    const connection = await this.getConnectionAsync();
+    const [rows] = await connection.execute(sql, params);
     return rows as [T];
   }
 
-  public async queryMultipleAsync<TDataSets extends object[][]>(
-      args: { sql: string; params?: any[] }[]): Promise<TDataSets> {
-    if (!args.length) {
-      throw new Error("[args] cannot be an empty array.");
+  public async queryMultipleAsync<TDataSets extends object[][]>(sqlStatements: string[]): Promise<TDataSets> {
+    if (!sqlStatements.length) {
+      throw new Error("[sqlStatements] cannot be an empty array.");
     }
 
-    const statements = args.map(arg => this._connection.format(arg.sql, arg.params)).join("");
-    const [rows] = await this._connection.query(statements);
+    const connection = await this.getConnectionAsync();
+    const statements = sqlStatements
+      .map(statement => {
+        const trimmedStatement = statement.trim();
+        return trimmedStatement.endsWith(";") ? trimmedStatement : trimmedStatement + ";"
+      }).join(" ");
+    const [rows] = await connection.query(statements);
     return rows as TDataSets;
   }
 
   public async executeAsync(sql: string, params?: Record<string, any>): Promise<number> {
-    const [result] = await this._connection.execute(sql, params);
+    const connection = await this.getConnectionAsync();
+    const [result] = await connection.execute(sql, params);
     return (result as ResultSetHeader).affectedRows;
   }
 
-  public async executeMultipleAsync(args: { sql: string; params?: any[] }[]): Promise<number> {
-    if (!args.length) {
-      throw new Error("[args] cannot be an empty array.");
+  public async executeMultipleAsync(sqlStatements: string[]): Promise<number> {
+    if (!sqlStatements.length) {
+      throw new Error("[sqlStatements] cannot be an empty array.");
     }
 
-    const statements = args.map(arg => this._connection.format(arg.sql, arg.params)).join("");
-    const [results] = await this._connection.query(statements);
+    const connection = await this.getConnectionAsync();
+    const statements = sqlStatements
+      .map(statement => {
+        const trimmedStatement = statement.trim();
+        return trimmedStatement.endsWith(";") ? trimmedStatement : trimmedStatement + ";"
+      }).join(" ");
+    const [results] = await connection.query(statements);
     return (results as ResultSetHeader[]).reduce((sum, result) => sum + result.affectedRows, 0);
   }
 
-  public async useTrasactionAsync<T>(operation: () => Promise<T>): Promise<T> {
+  public async useTransactionAsync<T>(operation: () => Promise<T>): Promise<T> {
     if (this.isTransactionBegun) {
       throw new Error("A transaction has already begun. Consider to commit or rollback first.");
     }
@@ -88,17 +93,20 @@ export class MySqlDbConnector implements IDbConnector {
   }
 
   public async beginTransactionAsync(): Promise<void> {
-    await this._connection.beginTransaction();
+    const connection = await this.getConnectionAsync();
+    await connection.beginTransaction();
     this.isTransactionBegun = true;
   }
 
   public async commitTransactionAsync(): Promise<void> {
-    await this._connection.commit();
+    const connection = await this.getConnectionAsync();
+    await connection.commit();
     this.isTransactionBegun = false;
   }
 
   public async rollbackTransactionAsync(): Promise<void> {
-    await this._connection.rollback();
+    const connection = await this.getConnectionAsync();
+    await connection.rollback();
     this.isTransactionBegun = false;
   }
 
@@ -106,6 +114,14 @@ export class MySqlDbConnector implements IDbConnector {
     await this.rollbackTransactionAsync();
     this.isTransactionBegun = false;
     this._connection?.release();
+  }
+
+  private async getConnectionAsync(): Promise<PoolConnection> {
+    if (!this._connection) {
+      this._connection = await MySqlDbConnector._pool.getConnection();
+    }
+
+    return this._connection;
   }
 
   static {

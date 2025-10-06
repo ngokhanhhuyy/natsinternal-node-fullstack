@@ -4,9 +4,11 @@ export interface IDbConnector {
   queryMultipleAsync<TDataSets extends object[][]>(sqlStatements: string[]): Promise<TDataSets>;
   executeAsync(sqlStatement: string): Promise<number>;
   executeMultipleAsync(sqlStatements: string[]): Promise<number>;
-  useTrasactionAsync<T>(operation: () => Promise<T>): Promise<T>;
+  useTransactionAsync<T>(operation: () => Promise<T>): Promise<T>;
   useTransactionIfNotBegunAsync<T>(operation: () => Promise<T>): Promise<T>;
   commitTransactionAsync(): Promise<void>;
   rollbackTransactionAsync(): Promise<void>;
   disposeAsync(): Promise<void>;
 }
+
+export const IDbConnectorToken: DependencyToken<IDbConnector> = Symbol("IDbConnectorToken");

@@ -1,4 +1,4 @@
-import { Role } from "@backend/core/domain/features/users/entities/role.js";
+import { Role } from "@backend/core/domain/features/users/entities/Role.js";
 import { PersistencePermission } from "./persistencePermission.js";
 
 export class PersistenceRole extends Role {

@@ -1,27 +1,27 @@
-import { User } from "@backend/core/domain/features/users/entities/user.js";
-import { Role } from "@backend/core/domain/features/users/entities/role.js";
-import type { IUserRepository } from "@backend/core/domain/features/users/repository.js";
+import { User } from "@backend/core/domain/features/users/entities/User.js";
+import { Role } from "@backend/core/domain/features/users/entities/Role.js";
+import type { IUserRepository } from "@backend/core/domain/features/users/repository/IUserRepository.js";
 import { IDbConnector } from "@backend/core/infrastructure/db/dbConnector/IDbConnector.js";
 import { AbstractRepository } from "./abstractRepository.js";
 import { PersistenceUser } from "@backend/core/infrastructure/entities/users/persistenceUser.js";
 import { PersistenceError } from "@backend/core/application/unitOfWork/persistenceError.js";
 import { PersistenceRole } from "@backend/core/infrastructure/entities/users/persistenceRole.js";
 import { PersistencePermission } from "@backend/core/infrastructure/entities/users/persistencePermission.js";
-import { IUserSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/user/IUserSqlProvider.js";
+import { IUserSqlProviderToken } from "@backend/core/infrastructure/db/sqlProviders/user/IUserSqlProvider.js";
 import { IRoleSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/role/IRoleSqlProvider.js";
 import { IUserRoleSqlProvider } from "@backend/core/infrastructure/db/sqlProviders/userRole/IUserRoleSqlProvider.js";
 import { IPermissionSqlProvider } from "../db/sqlProviders/permission/IPermissionSqlProvider.js";
 
 export class UserRepository extends AbstractRepository implements IUserRepository {
   private readonly _dbConnector: IDbConnector;
-  private readonly _userSqlProvider: IUserSqlProvider;
+  private readonly _userSqlProvider: IUserSqlProviderToken;
   private readonly _roleSqlProvider: IRoleSqlProvider;
   private readonly _userRoleSqlProvider: IUserRoleSqlProvider;
   private readonly _permissionSqlProvider: IPermissionSqlProvider;
 
   public constructor(
       dbConnector: IDbConnector,
-      userSqlProvider: IUserSqlProvider,
+      userSqlProvider: IUserSqlProviderToken,
       roleSqlProvider: IRoleSqlProvider,
       userRoleSqlProvider: IUserRoleSqlProvider,
       permissionSqlProvider: IPermissionSqlProvider) {

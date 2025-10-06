@@ -8,3 +8,5 @@ export type RoleDbRecord = {
 export interface IRoleSqlProvider {
   selectRolesByUserIdsSql(userIds: string[]): string;
 }
+
+export const IRoleSqlProviderToken: DependencyToken<IRoleSqlProvider> = Symbol("IRoleSqlProvider");

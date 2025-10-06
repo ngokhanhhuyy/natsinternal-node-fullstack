@@ -1,8 +1,8 @@
 import { PersistenceUser } from "@backend/core/infrastructure/entities/users/persistenceUser.js";
-import type { IUserSqlProvider } from "./IUserSqlProvider.js";
+import type { IUserSqlProviderToken } from "./IUserSqlProvider.js";
 import { MySqlDbConnector } from "@backend/core/infrastructure/db/dbConnector/MySqlDbConnector.js";
 
-export class MySqlUserSqlProvider implements IUserSqlProvider {
+export class MySqlUserSqlProvider implements IUserSqlProviderToken {
   private readonly _connector: MySqlDbConnector;
 
   public constructor(connector: MySqlDbConnector) {
